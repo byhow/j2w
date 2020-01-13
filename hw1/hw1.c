@@ -1,7 +1,31 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-int GLOBAL_DUNGEON_MAP[10];
+int* DUNGEON_MAP = NULL;
+int* NAME_MAP = NULL;
+
+
+char* getDescription(char* cpy) {
+    int strLen = strlen(cpy);
+    // get start index and end index, change 
+    // end index to \0
+    int start = 0, end = 0;
+    for (int i = 0; i < strLen; i++) {
+        if (cpy[i] == '+') {
+            start = i;
+            continue;
+        } 
+        
+        if (start != 0 && cpy[i] == '+') {
+            end = i;
+            break;
+        }
+    }
+    cpy[end] = '\0';
+    printf("%s", cpy);
+    return cpy + start;
+}
 
 int north() {
     return 0;
@@ -10,8 +34,25 @@ int north() {
 
 int loadDungeon(char* fileName) {
     // read the content to map
-    printf("reading file...");
+    printf("reading file...\n");
+    FILE* fp;
+    char buf[255];
+    fp = fopen(fileName,"r");
+
+    while(fgets(buf, 255, (FILE*)fp)) {
+        // printf("%s", buf);
+        char cpy[strlen(buf)];
+        strcpy(cpy, buf);
+
+        char* lineStr = getDescription(cpy);
+        // printf("%s", lineStr);
+    }
+
+    
+    fclose(fp);
+    printf("finished reading...\n");
 }
+
 
 int east() {
     // if failed to move to the room
@@ -26,6 +67,7 @@ int south() {
     return 0;
 }
 
+
 void adventure() {
     char buf[50];
     char endWord[] = "quit";
@@ -38,30 +80,15 @@ void adventure() {
         if (!strcmp(buf, "quit")) break;
 
         if (strlen(buf) > 10 && !strncmp(buf, "loaddungeon", 11)) {
-            char cpy[strlen(buf)];
-            strcpy(buf, cpy);
-            loadDungeon("dfile.txt");
+            // char cpy[strlen(buf)];
+            // strcpy(cpy, buf);
+            // catch exception
+            loadDungeon(buf + 12);
         }
 
         printf("$ ");
 
     }
-
-    // do {
-        
-    //     fgets(str, 50, stdin);
-    //     char cpy[strlen(str)];
-    //     strcpy(str, cpy);
-        // if (len > 10 && strncmp(str, "loaddungeon", 10 == 0)) {
-        //     printf("%s", cpy+10);
-        //     printf("\n");
-        // } else if (strcmp(str, "north") == 0) {
-        //     printf("north");
-        // } 
-        // str[0] = '\0';
-    //     printf("%s", str);
-    //     printf("%d", strcmp("quit", endWord));
-    // } while (strcmp(cpy, endWord));
     
 }
 
