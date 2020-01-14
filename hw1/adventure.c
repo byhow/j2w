@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define MAX_LINE_SIZE 120
+#define MAX_FILE_SIZE 100
 
 int *DUNGEON_MAP[100];
 const char *NAME_MAP[120];
+int loaded = 0;
 
 char* parseDescription(char* cpy) {
     int strLen = strlen(cpy);
@@ -54,10 +57,14 @@ void parseRoomMapByLine(char* buf, int current_room) {
 
 void loadDungeon(char* fileName) {
     // read the content to map
-    printf("reading file...\n");
+    printf("Reading file...\n");
     FILE* fp;
     char buf[120];
     fp = fopen(fileName,"r");
+    if (fp == NULL) {
+        printf("Fail to open the file %s \n", fileName);
+        return;
+    }
     
     while(fgets(buf, 255, (FILE*)fp)) {
         char cpy[strlen(buf)];
@@ -67,11 +74,11 @@ void loadDungeon(char* fileName) {
         // cpy is changed after getting the description
         char* lineStr = parseDescription(cpy);
         NAME_MAP[room_num] = lineStr;
-
+        printf("#");
     }
     
     fclose(fp);
-    printf("finished reading...\n");
+    printf("\nFinished reading...\n");
 }
 
 int north() {
@@ -112,8 +119,13 @@ void adventure() {
         } else if (strlen(buf) > 10 && !strncmp(buf, "loaddungeon", 11)) {
             // char cpy[strlen(buf)];
             // strcpy(cpy, buf);
-            // catch exception
-            loadDungeon(buf + 12);
+            if (!loaded) {
+                loadDungeon(buf + 12); 
+                loaded += 1;           
+            } else {
+                printf("Dungeon already loaded\n");
+            }
+
         } else if (!strcmp(buf, "north")) {
             north();
         } else if (!strcmp(buf, "south")) {
