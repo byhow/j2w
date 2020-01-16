@@ -4,8 +4,8 @@
 #define MAX_LINE_SIZE 120
 #define MAX_FILE_SIZE 100
 
-int *DUNGEON_MAP[100];
-const char *NAME_MAP[120];
+int *DUNGEON_MAP[1000];
+const char *NAME_MAP[1200];
 int loaded = 0;
 
 char* parseDescription(char* cpy) {
@@ -69,7 +69,8 @@ void loadDungeon(char* fileName) {
     while(fgets(buf, 255, (FILE*)fp)) {
         char cpy[strlen(buf)];
         strcpy(cpy, buf);
-        int room_num = buf[0] - '0';
+        char *ptr = strtok(cpy, "+");
+        int room_num = atoi(ptr);
         parseRoomMapByLine(cpy, room_num);
         // cpy is changed after getting the description
         char* lineStr = parseDescription(cpy);
