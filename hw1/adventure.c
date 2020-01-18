@@ -4,60 +4,13 @@
 #define MAX_LINE_SIZE 120
 #define MAX_FILE_SIZE 100
 
-int *DUNGEON_MAP[1000];
-const char *NAME_MAP[1200];
+char DUNGEON_MAP[4][1000];
+// N, S, E, W
+char NAME_MAP[120][1200];
 int loaded = 0;
-
-char* parseDescription(char* cpy) {
-    int strLen = strlen(cpy);
-    // get start index and end index, change 
-    // end index to \0
-    int start = 0, end = 0;
-    for (int i = 0; i < strLen; i++) {
-        if (cpy[i] == '+') {
-            if (!start) { 
-                start = i;
-                continue;
-            } else {
-                end = i;
-                break;
-            }
-        }
-
-    }
-    cpy[end] = '\0';
-    return cpy + start + 1;
-}
-
-
-void parseRoomMapByLine(char* buf, int current_room) {
-    char cpy[strlen(buf)];
-    strcpy(cpy, buf);
-    int last = 0, i = 0, len = strlen(buf);
-    for (; i < len; i++) {
-        if (cpy[i] == '+') {
-            last = i;
-        }
-    }
-    char* map_arr = cpy + last + 1;
-    int connect_rooms[120];
-    char delim[] = " ";
-    char *ptr = strtok(map_arr, delim);
-    int square_map[4];
-    int index = 0;
-    while(ptr != NULL) {
-        int room = atoi(ptr);
-        ptr = strtok(NULL, delim);
-        square_map[index++] = room;
-    }
-
-    DUNGEON_MAP[current_room] = square_map;
-    printf("%d\n", DUNGEON_MAP[current_room][0]);
-}
+int current = -255;
 
 void loadDungeon(char* fileName) {
-    // read the content to map
-    printf("Reading file...\n");
     FILE* fp;
     char buf[120];
     fp = fopen(fileName,"r");
@@ -65,43 +18,89 @@ void loadDungeon(char* fileName) {
         printf("Fail to open the file %s \n", fileName);
         return;
     }
-    
+    int init_room = -1;
     while(fgets(buf, 255, (FILE*)fp)) {
-        char cpy[strlen(buf)];
-        strcpy(cpy, buf);
-        char *ptr = strtok(cpy, "+");
-        int room_num = atoi(ptr);
-        parseRoomMapByLine(cpy, room_num);
-        // cpy is changed after getting the description
-        char* lineStr = parseDescription(cpy);
-        NAME_MAP[room_num] = lineStr;
-        printf("#");
+        if (buf[0] == '\n') { continue; }
+        char* cur = strtok(buf, " ");
+        int room_num = atoi(cur);
+        if (init_room == -1) {
+            init_room = room_num;
+        }
+        if (current == -255) { current = room_num; }
+        cur = strtok(NULL, "+");
+        strcpy(NAME_MAP[room_num], cur);
+        strcpy(DUNGEON_MAP[room_num], strtok(NULL, "\n"));
     }
-    
+    printf("%s\n", NAME_MAP[init_room]);
     fclose(fp);
-    printf("\nFinished reading...\n");
 }
 
 int north() {
-    printf("turning north\n");
+    char cpy[strlen(DUNGEON_MAP[current])];
+    strcpy(cpy, DUNGEON_MAP[current]);
+    char* north_str = strtok(cpy, " ");
+    int north = atoi(north_str);
+    int south = atoi(strtok(NULL, " "));
+    int east = atoi(strtok(NULL, " "));
+    int west = atoi(strtok(NULL, " "));
+    if (north != -1) {
+        current = north;
+        printf("%s\n", NAME_MAP[current]);
+    } else {
+        printf("Not accessible\n");
+    }
     return 0;
 }
 
 int east() {
     // if failed to move to the room
-    printf("turning east\n");
+    char cpy[strlen(DUNGEON_MAP[current])];
+    strcpy(cpy, DUNGEON_MAP[current]);
+    char* north_str = strtok(cpy, " ");
+    int north = atoi(north_str);
+    int south = atoi(strtok(NULL, " "));
+    int east = atoi(strtok(NULL, " "));
+    int west = atoi(strtok(NULL, " "));
+    if (east != -1) {
+        current = east;
+        printf("%s\n", NAME_MAP[current]);
+    } else {
+        printf("Not accessible\n");
+    }
     return 0;
 }
 
 int west() {
-    printf("turning west\n");
-
+    char cpy[strlen(DUNGEON_MAP[current])];
+    strcpy(cpy, DUNGEON_MAP[current]);
+    char* north_str = strtok(cpy, " ");
+    int north = atoi(north_str);
+    int south = atoi(strtok(NULL, " "));
+    int east = atoi(strtok(NULL, " "));
+    int west = atoi(strtok(NULL, " "));
+    if (west != -1) {
+        current = west;
+        printf("%s\n", NAME_MAP[current]);
+    } else {
+        printf("Not accessible\n");
+    }
     return 0;
 }
 
 int south() {
-    printf("turning south\n");
-
+    char cpy[strlen(DUNGEON_MAP[current])];
+    strcpy(cpy, DUNGEON_MAP[current]);
+    char* north_str = strtok(cpy, " ");
+    int north = atoi(north_str);
+    int south = atoi(strtok(NULL, " "));
+    int east = atoi(strtok(NULL, " "));
+    int west = atoi(strtok(NULL, " "));
+    if (south != -1) {
+        current = south;
+        printf("%s\n", NAME_MAP[current]);
+    } else {
+        printf("Not accessible\n");
+    }
     return 0;
 }
 
@@ -121,22 +120,28 @@ void adventure() {
             // char cpy[strlen(buf)];
             // strcpy(cpy, buf);
             if (!loaded) {
+                // the file itself can be empty
                 loadDungeon(buf + 12); 
-                loaded += 1;           
+                loaded = 1;           
             } else {
                 printf("Dungeon already loaded\n");
             }
 
-        } else if (!strcmp(buf, "north")) {
-            north();
-        } else if (!strcmp(buf, "south")) {
-            south();
-        } else if (!strcmp(buf, "east")) {
-            east();
-        } else if (!strcmp(buf, "west")) {
-            west();
-        } else
-        {
+        } else if (loaded) {
+            if (!strcmp(buf, "north")) {
+                north();
+            } else if (!strcmp(buf, "south")) {
+                south();
+            } else if (!strcmp(buf, "east")) {
+                east();
+            } else if (!strcmp(buf, "west")) {
+                west();
+            } else {
+                if (strlen(buf)) {
+                    printf("INVALID COMMAND!\n");
+                }
+            }
+        } else {
             printf("INVALID COMMAND!\n");
         }
         
