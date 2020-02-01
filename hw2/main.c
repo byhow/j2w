@@ -37,7 +37,19 @@ struct cmd
     int pout; // 0 
 };
 
-void wrapUp();
+
+void wrapUp() { 
+    int status;
+    
+    for (int i = 0; i < counter; i++) {
+        kill(pid_arr[i], SIGINT);
+        // printf("Killing processes\n");
+    }
+
+    for (int i = 0; i < counter; i++) {
+        pid_t pw = wait(&status);
+    }
+}
 
 
 void printCmd(struct cmd* command) {
@@ -69,9 +81,8 @@ int execCommand(struct cmd* command) {
                     if (command -> infile != NULL) {
                         // char input_str[255];
                         FILE* fp = freopen(command -> infile, "r", stdin);
+                        // printf("$$input file\n"); 
 
-                        printf("$$input file\n");
-                        
                         if (fp == NULL) {
                             fprintf(stderr, "redirect input %s failed\n", command -> infile);
                         } 
@@ -79,22 +90,20 @@ int execCommand(struct cmd* command) {
                         if (execve(command->argv[0], command->argv, NULL)) {
                             exit(0);
                         }
-                        fclose(fp);
+                        
                         
                     } else if (command -> outfile != NULL) {
-                        FILE* fp = freopen(command -> outfile, "w+", stdin);
+                        FILE* fp = freopen(command -> outfile, "w+", stdout);
 
-                        printf("$$output file\n");
+                        // printf("$$output file\n");
 
                         if (fp == NULL) {
                             fprintf(stderr, "redirect output %s failed\n", command -> outfile);
                         } 
-                        
-
                         if (execve(command->argv[0], command->argv, NULL)) {
                             exit(0);
                         }
-                        fclose(fp);
+                        
                     } 
                 } else {
                     if (command -> pin > command -> pout) {
@@ -112,10 +121,6 @@ int execCommand(struct cmd* command) {
                             fprintf(stderr, "redirect output %s failed\n", command -> outfile);
                         }
 
-                        while (fgets(input_str, 255, fp)) {
-                            printf("%s", input_str);
-                        }
-
                         if (execve(command->argv[0], command->argv, NULL)) {
                             exit(0);
                         }
@@ -125,28 +130,23 @@ int execCommand(struct cmd* command) {
                     }
                 }
             }
+        
 
         } else {
-            pid_arr[counter++] = pid;
+            if (waitpid(pid, &status, 0) < 0) {
+                // printf("PARENT: waitpid %d\n", pid);
+            }
         }
 
-        if (waitpid(pid, &status, 0) < 0) {
-            printf("PARENT: waitpid %d\n", pid);
-        }
-        printf("Foregroud task %s\n", command->argv[0]);
     } else { 
         if ((pid=fork()==0)) {
             if (execve(command->argv[0], command->argv, NULL)) {
                 exit(0);
             }
         } else {
-            // printf("%d", waitpid(pid, &status, 0));
-            // if (waitpid(pid, &status, 0) < 0) {
-            printf("PARENT: waitpid %d\n", pid);
-            // } 
+            pid_arr[counter++] = pid;
         }
         // run process in background
-        printf("Backgroud task\n");
         
     }
 
@@ -205,12 +205,12 @@ struct cmd* parseLine(char* commandStr) {
                 }
                 command -> argv[++i] = strtok(NULL, " "); 
             }
-            printCmd(command);
+            // printCmd(command);
 
         }
 
     } else {
-        printf("empty command");
+        // printf("empty command");
     }
     return command;
 }
@@ -224,6 +224,7 @@ int main(){
         struct cmd* commands = parseLine(commandStr);
 
         if (!(commands -> mode)) {
+            wrapUp();
             free(commands);
             // clean zombie process
             exit(0);

@@ -8,7 +8,7 @@ int main (int argc, char* argv[]) {
 	}
 	int i = 0;
 	while(i <= num) {
-		printf("Printing at %d\n",i);
+		// printf("Printing at %d\n",i);
 		++i;
         sleep(1);
 	}

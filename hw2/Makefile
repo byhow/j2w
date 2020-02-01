@@ -5,8 +5,9 @@ debug:
 	gdb hw2
 
 hello:
-	g++ hello.c -o hello
-	
+	rm -f hello
+	gcc -g hello.c -o hello
+
 compile:
 	make clean
 	gcc -g main.c -o hw2
