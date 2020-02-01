@@ -1,0 +1,10 @@
+bye.c  
+hello  
+hello.c  
+hw2  
+3
+ls.txt  
+main.c
+Makefile  
+1
+4
