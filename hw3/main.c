@@ -7,21 +7,17 @@
 
 static int lru = 0;
 static const char QUIT[] = "quit";
-static const char LRU[] = "LRU";
+static const char LRU_STR[] = "LRU";
+static int tlb[4] = {0, 1, 2, 3};
+static int fifoq[4] = {-1, -1, -1, -1};
 
-static int main_memory[4][BLOCKSIZE] = {{-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1} };
+static int main_memory[4][BLOCKSIZE] = {{-1, -1, -1, -1}, {-1, -1, -1, -1},
+                                {-1, -1, -1, -1}, {-1, -1, -1, -1} };
 
-static int disk_memory[8][BLOCKSIZE] = {{-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1},
-                                {-1, -1, -1, -1} };
+static int disk_memory[8][BLOCKSIZE] = {{-1, -1, -1, -1}, {-1, -1, -1, -1},
+                                {-1, -1, -1, -1}, {-1, -1, -1, -1},
+                                {-1, -1, -1, -1}, {-1, -1, -1, -1},
+                                {-1, -1, -1, -1}, {-1, -1, -1, -1} };
 
 struct pageEntry {
     int valid;
@@ -29,20 +25,15 @@ struct pageEntry {
     int pageNum;
 };
 
-static struct pageEntry page_table[8] = { {0, 0, 0},
-                                    {0, 0, 1},
-                                    {0, 0, 2},
-                                    {0, 0, 3},
-                                    {0, 0, 4},
-                                    {0, 0, 5},
-                                    {0, 0, 6},
-                                    {0, 0, 7} };
+static struct pageEntry page_table[8] = { {0, 0, 0}, {0, 0, 1},
+                                    {0, 0, 2}, {0, 0, 3}, {0, 0, 4},
+                                    {0, 0, 5}, {0, 0, 6}, {0, 0, 7} };
 
 int findFirstAvailable() {
     int page_entry_tmp[4] = {0, 0, 0, 0}; // number of pages in page table
     for (int i = 0; i < 8; i++) {
-        if (page_table[i][0]) {
-            page_entry_tmp[page_table[i][2]] = 1;
+        if (page_table[i].valid) {
+            page_entry_tmp[page_table[i].pageNum] = 1;
         }
     }
     int ret_index = -1;
@@ -54,27 +45,202 @@ int findFirstAvailable() {
     return ret_index;
 }
 
-int swapLRU();
-int swapFIFO();
+int swapLRU() {
+    // TODO: LRU
+    return 0;
+}
+
+int swapFIFO() {
+    // shift array
+    int first = fifoq[0]; // 0
+    for (int i = 0; i < 3; i++) {
+        fifoq[i] = fifoq[i+1]; // [1, 2, 3, 3]
+    }
+    fifoq[3] = first; // [1, 2, 3, 0]
+    return first;
+}
+
+int findpTableEntry(int page_addr) {
+    for (int i = 0; i < 8; i++) {
+        if (page_table[i].valid && page_table[i].pageNum == page_addr) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 int execRead(int virtual_addr) {
-    printf("READ:Virtual Address is %d\n", virtual_addr);
+    // if valid
+    if (page_table[virtual_addr>>2].valid) {
+        // increment tlb or fifoq
+        if (!lru) {
+            for (int i = 0; i < 4; i++) {
+                if (fifoq[i] == -1) {
+                    fifoq[i] = page_table[virtual_addr>>2].pageNum;
+                    break;
+                }
+            } 
+        } else {
+            // TODO: LRU update queue
+        }
+        printf("%d\n", main_memory[page_table[virtual_addr>>2].pageNum][virtual_addr%4]);
+        printf("FIFO q is: ");
+        for (int i = 0; i < 4; i++) {
+            printf("%d, ", fifoq[i]);
+        }
+        printf("\n");
+    } else {
+        // page fault
+        printf("A Page Fault Has Occurred\n");
+        int free_block_addr = findFirstAvailable();
+        if (free_block_addr < 0) {
+            // need to swap out with FIFO or LRU
+            int free_page;
+            if (lru) {
+                free_page = swapLRU();
+            } else {
+                free_page = swapFIFO();
+            }
+            int table_i = findFirstAvailable(free_page);
+            if (page_table[table_i].dirty) {
+                disk_memory[table_i][0] = main_memory[free_page][0];
+                disk_memory[table_i][1] = main_memory[free_page][1];
+                disk_memory[table_i][2] = main_memory[free_page][2];
+                disk_memory[table_i][3] = main_memory[free_page][3];
+            } 
+            // counter for lru should kick in
+            page_table[virtual_addr>>2].valid = 1;
+            page_table[virtual_addr>>2].pageNum = free_page;
+            page_table[table_i].valid = 0;
+            page_table[table_i].dirty = 0;
+            page_table[table_i].pageNum = table_i;
+            main_memory[free_page][0] = disk_memory[virtual_addr>>2][0];
+            main_memory[free_page][1] = disk_memory[virtual_addr>>2][1];
+            main_memory[free_page][2] = disk_memory[virtual_addr>>2][2];
+            main_memory[free_page][3] = disk_memory[virtual_addr>>2][3];
+            printf("%d\n", main_memory[free_page][virtual_addr%4]);
+            printf("FIFO q is: ");
+            for (int i = 0; i < 4; i++) {
+                printf("%d, ", fifoq[i]);
+            }
+            printf("\n");
+
+        } else {
+            // use the checked block
+            main_memory[free_block_addr][0] = disk_memory[virtual_addr>>2][0];
+            main_memory[free_block_addr][1] = disk_memory[virtual_addr>>2][1];
+            main_memory[free_block_addr][2] = disk_memory[virtual_addr>>2][2];
+            main_memory[free_block_addr][3] = disk_memory[virtual_addr>>2][3];
+
+            page_table[virtual_addr>>2].valid = 1;
+            page_table[virtual_addr>>2].pageNum = free_block_addr;
+            
+            // increment tlb or fifoq
+            if (!lru) {
+                for (int i = 0; i < 4; i++) {
+                    if (fifoq[i] == -1) {
+                        fifoq[i] = page_table[virtual_addr>>2].pageNum;
+                        break;
+                    }
+                } 
+            } else {
+                // TODO: LRU update queue
+            }
+            // TODO: increment lru counter
+            printf("%d\n", main_memory[free_block_addr][virtual_addr%4]);
+            printf("FIFO q is: ");
+            for (int i = 0; i < 4; i++) {
+                printf("%d, ", fifoq[i]);
+            }
+            printf("\n");
+        }
+    }
 }
 
 int execWrite(int virtual_addr, int num) {
-    printf("WRITE:Virtual Address is %d, and num is %d\n", virtual_addr, num);
+    if (page_table[virtual_addr>>2].valid) {
+        // increment tlb
+        main_memory[page_table[virtual_addr>>2].pageNum][virtual_addr%4] = num;
+        page_table[virtual_addr>>2].dirty = 1;
+        printf("FIFO q is: ");
+        for (int i = 0; i < 4; i++) {
+            printf("%d, ", fifoq[i]);
+        }
+        printf("\n");
+    } else {
+        printf("A Page Fault Has Occurred\n");
+        int free_block_addr = findFirstAvailable();
+        printf("free_block_addr is %d\n", free_block_addr);
+        if (free_block_addr < 0) {
+            // need to swap out with FIFO or LRU
+            int free_page;
+            if (lru) {
+                free_page = swapLRU();
+            } else {
+                free_page = swapFIFO();
+            }
+            
+            int table_i = findFirstAvailable(free_page);
+            if (page_table[table_i].dirty) {
+                disk_memory[table_i][0] = main_memory[free_page][0];
+                disk_memory[table_i][1] = main_memory[free_page][1];
+                disk_memory[table_i][2] = main_memory[free_page][2];
+                disk_memory[table_i][3] = main_memory[free_page][3];
+            } 
+            // counter for lru should kick in
+            page_table[virtual_addr>>2].valid = 1;
+            page_table[virtual_addr>>2].dirty = 1;
+            page_table[virtual_addr>>2].pageNum = free_page;
+            page_table[table_i].valid = 0;
+            page_table[table_i].dirty = 0;
+            page_table[table_i].pageNum = table_i;
+            main_memory[free_page][0] = disk_memory[virtual_addr>>2][0];
+            main_memory[free_page][1] = disk_memory[virtual_addr>>2][1];
+            main_memory[free_page][2] = disk_memory[virtual_addr>>2][2];
+            main_memory[free_page][3] = disk_memory[virtual_addr>>2][3];
+            main_memory[free_page][virtual_addr%4] = num;
+
+        } else {
+            main_memory[free_block_addr][0] = disk_memory[virtual_addr>>2][0];
+            main_memory[free_block_addr][1] = disk_memory[virtual_addr>>2][1];
+            main_memory[free_block_addr][2] = disk_memory[virtual_addr>>2][2];
+            main_memory[free_block_addr][3] = disk_memory[virtual_addr>>2][3];
+            main_memory[free_block_addr][virtual_addr%4] = num;
+            page_table[virtual_addr>>2].valid = 1;
+            page_table[virtual_addr>>2].dirty = 1;
+            page_table[virtual_addr>>2].pageNum = free_block_addr;
+            // increment tlb or fifoq
+            if (!lru) {
+                for (int i = 0; i < 4; i++) {
+                    if (fifoq[i] == -1) {
+                        fifoq[i] = page_table[virtual_addr>>2].pageNum;
+                        break;
+                    }
+                } 
+            } else {
+                // TODO: LRU update queue
+            }
+            printf("FIFO q is: ");
+            for (int i = 0; i < 4; i++) {
+                printf("%d, ", fifoq[i]);
+            }
+            printf("\n");
+            // TODO: update LRU history (FIFO)
+        }
+    }
+
 }
 
 int showMain(int ppn) {
-    if (ppn > 3) { printf("physical page number exceeds maximum\n")};
+    if (ppn > 3) { printf("physical page number exceeds maximum\n"); };
     for (int i = 0; i < 4; i++) {
         printf("%d:%d\n", ppn*BLOCKSIZE + i, main_memory[ppn][i]);
     }
 }
 
 int showDisk(int dpn) {
-    if (dpn > 7) { printf("disk page number exceeds maximum\n" };
-    for (int i = 0; i < 8; i++) {
+    if (dpn > 7) { printf("disk page number exceeds maximum\n"); };
+    for (int i = 0; i < 4; i++) {
         printf("%d:%d\n", dpn*BLOCKSIZE + i, disk_memory[dpn][i]);
     }
 }
@@ -89,7 +255,7 @@ int main(int argc, char** argv){
     if (argc > 2) {
         printf("More than 2 arguments!\n");
         return -1;
-    } else if (argc > 1 && strlen(argv[1]) > 2 && !strncmp(argv[1], LRU, 3)) {
+    } else if (argc > 1 && strlen(argv[1]) > 2 && !strncmp(argv[1], LRU_STR, 3)) {
         lru = 1;
     }
 
