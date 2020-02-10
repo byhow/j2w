@@ -7,7 +7,7 @@ compile:
 
 run:
 	make compile
-	./hw3
+	./hw3 LRU
 
 debug:
 	make compile && gdb hw3

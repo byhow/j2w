@@ -10,6 +10,7 @@ static const char QUIT[] = "quit";
 static const char LRU_STR[] = "LRU";
 static int tlb[4] = {0, 1, 2, 3};
 static int fifoq[4] = {-1, -1, -1, -1};
+static int used_num = 0;
 
 static int main_memory[4][BLOCKSIZE] = {{-1, -1, -1, -1}, {-1, -1, -1, -1},
                                 {-1, -1, -1, -1}, {-1, -1, -1, -1} };
@@ -46,8 +47,15 @@ int findFirstAvailable() {
 }
 
 int swapLRU() {
-    // TODO: LRU
-    return 0;
+    int min_index = 0;
+    int min = tlb[min_index];
+    for (int i = 1; i < 4; i++) {
+        if (min > tlb[i]) {
+            min = tlb[i];
+            min_index = i;
+        }
+    }
+    return min_index;
 }
 
 int swapFIFO() {
@@ -70,6 +78,8 @@ int findpTableEntry(int page_addr) {
 }
 
 int execRead(int virtual_addr) {
+    used_num++;
+    
     // if valid
     if (page_table[virtual_addr>>2].valid) {
         // increment tlb or fifoq
@@ -81,14 +91,9 @@ int execRead(int virtual_addr) {
                 }
             } 
         } else {
-            // TODO: LRU update queue
+            tlb[page_table[virtual_addr>>2].pageNum] = used_num;
         }
         printf("%d\n", main_memory[page_table[virtual_addr>>2].pageNum][virtual_addr%4]);
-        printf("FIFO q is: ");
-        for (int i = 0; i < 4; i++) {
-            printf("%d, ", fifoq[i]);
-        }
-        printf("\n");
     } else {
         // page fault
         printf("A Page Fault Has Occurred\n");
@@ -101,14 +106,14 @@ int execRead(int virtual_addr) {
             } else {
                 free_page = swapFIFO();
             }
-            int table_i = findFirstAvailable(free_page);
+            int table_i = findpTableEntry(free_page);
             if (page_table[table_i].dirty) {
                 disk_memory[table_i][0] = main_memory[free_page][0];
                 disk_memory[table_i][1] = main_memory[free_page][1];
                 disk_memory[table_i][2] = main_memory[free_page][2];
                 disk_memory[table_i][3] = main_memory[free_page][3];
             } 
-            // counter for lru should kick in
+
             page_table[virtual_addr>>2].valid = 1;
             page_table[virtual_addr>>2].pageNum = free_page;
             page_table[table_i].valid = 0;
@@ -118,12 +123,9 @@ int execRead(int virtual_addr) {
             main_memory[free_page][1] = disk_memory[virtual_addr>>2][1];
             main_memory[free_page][2] = disk_memory[virtual_addr>>2][2];
             main_memory[free_page][3] = disk_memory[virtual_addr>>2][3];
+            
             printf("%d\n", main_memory[free_page][virtual_addr%4]);
-            printf("FIFO q is: ");
-            for (int i = 0; i < 4; i++) {
-                printf("%d, ", fifoq[i]);
-            }
-            printf("\n");
+            if(lru) { tlb[free_page] = used_num; }
 
         } else {
             // use the checked block
@@ -144,33 +146,36 @@ int execRead(int virtual_addr) {
                     }
                 } 
             } else {
-                // TODO: LRU update queue
+                tlb[free_block_addr] = used_num;
             }
-            // TODO: increment lru counter
+            
             printf("%d\n", main_memory[free_block_addr][virtual_addr%4]);
-            printf("FIFO q is: ");
-            for (int i = 0; i < 4; i++) {
-                printf("%d, ", fifoq[i]);
-            }
-            printf("\n");
         }
     }
 }
 
 int execWrite(int virtual_addr, int num) {
+    used_num++;
+
     if (page_table[virtual_addr>>2].valid) {
-        // increment tlb
+        // increment tlb or fifoq
+        if (!lru) {
+            for (int i = 0; i < 4; i++) {
+                if (fifoq[i] == -1) {
+                    fifoq[i] = page_table[virtual_addr>>2].pageNum;
+                    break;
+                }
+            } 
+        } else {
+            tlb[page_table[virtual_addr>>2].pageNum] = used_num;
+        }
         main_memory[page_table[virtual_addr>>2].pageNum][virtual_addr%4] = num;
         page_table[virtual_addr>>2].dirty = 1;
-        printf("FIFO q is: ");
-        for (int i = 0; i < 4; i++) {
-            printf("%d, ", fifoq[i]);
-        }
-        printf("\n");
+
     } else {
         printf("A Page Fault Has Occurred\n");
         int free_block_addr = findFirstAvailable();
-        printf("free_block_addr is %d\n", free_block_addr);
+
         if (free_block_addr < 0) {
             // need to swap out with FIFO or LRU
             int free_page;
@@ -180,7 +185,7 @@ int execWrite(int virtual_addr, int num) {
                 free_page = swapFIFO();
             }
             
-            int table_i = findFirstAvailable(free_page);
+            int table_i = findpTableEntry(free_page);
             if (page_table[table_i].dirty) {
                 disk_memory[table_i][0] = main_memory[free_page][0];
                 disk_memory[table_i][1] = main_memory[free_page][1];
@@ -188,6 +193,8 @@ int execWrite(int virtual_addr, int num) {
                 disk_memory[table_i][3] = main_memory[free_page][3];
             } 
             // counter for lru should kick in
+            tlb[free_page] = used_num;
+
             page_table[virtual_addr>>2].valid = 1;
             page_table[virtual_addr>>2].dirty = 1;
             page_table[virtual_addr>>2].pageNum = free_page;
@@ -199,7 +206,8 @@ int execWrite(int virtual_addr, int num) {
             main_memory[free_page][2] = disk_memory[virtual_addr>>2][2];
             main_memory[free_page][3] = disk_memory[virtual_addr>>2][3];
             main_memory[free_page][virtual_addr%4] = num;
-
+            
+            
         } else {
             main_memory[free_block_addr][0] = disk_memory[virtual_addr>>2][0];
             main_memory[free_block_addr][1] = disk_memory[virtual_addr>>2][1];
@@ -218,14 +226,9 @@ int execWrite(int virtual_addr, int num) {
                     }
                 } 
             } else {
-                // TODO: LRU update queue
+                tlb[free_block_addr] = used_num;
             }
-            printf("FIFO q is: ");
-            for (int i = 0; i < 4; i++) {
-                printf("%d, ", fifoq[i]);
-            }
-            printf("\n");
-            // TODO: update LRU history (FIFO)
+
         }
     }
 
