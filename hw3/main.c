@@ -38,6 +38,25 @@ static struct pageEntry page_table[8] = { {0, 0, 0},
                                     {0, 0, 6},
                                     {0, 0, 7} };
 
+int findFirstAvailable() {
+    int page_entry_tmp[4] = {0, 0, 0, 0}; // number of pages in page table
+    for (int i = 0; i < 8; i++) {
+        if (page_table[i][0]) {
+            page_entry_tmp[page_table[i][2]] = 1;
+        }
+    }
+    int ret_index = -1;
+    for (int j = 0; j < 4; j++) {
+        if (!page_entry_tmp[j]) {
+            return j;
+        }
+    }
+    return ret_index;
+}
+
+int swapLRU();
+int swapFIFO();
+
 int execRead(int virtual_addr) {
     printf("READ:Virtual Address is %d\n", virtual_addr);
 }
