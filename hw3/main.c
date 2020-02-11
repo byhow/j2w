@@ -32,13 +32,15 @@ static struct pageEntry page_table[8] = { {0, 0, 0}, {0, 0, 1},
 
 int findFirstAvailable() {
     int page_entry_tmp[4] = {0, 0, 0, 0}; // number of pages in page table
-    for (int i = 0; i < 8; i++) {
+    int i = 0;
+    for (; i < 8; i++) {
         if (page_table[i].valid) {
             page_entry_tmp[page_table[i].pageNum] = 1;
         }
     }
     int ret_index = -1;
-    for (int j = 0; j < 4; j++) {
+    int j = 0;
+    for (; j < 4; j++) {
         if (!page_entry_tmp[j]) {
             return j;
         }
@@ -49,7 +51,8 @@ int findFirstAvailable() {
 int swapLRU() {
     int min_index = 0;
     int min = tlb[min_index];
-    for (int i = 1; i < 4; i++) {
+    int i = 1;
+    for (; i < 4; i++) {
         if (min > tlb[i]) {
             min = tlb[i];
             min_index = i;
@@ -61,7 +64,8 @@ int swapLRU() {
 int swapFIFO() {
     // shift array
     int first = fifoq[0]; // 0
-    for (int i = 0; i < 3; i++) {
+    int i = 0;
+    for (; i < 3; i++) {
         fifoq[i] = fifoq[i+1]; // [1, 2, 3, 3]
     }
     fifoq[3] = first; // [1, 2, 3, 0]
@@ -69,7 +73,8 @@ int swapFIFO() {
 }
 
 int findpTableEntry(int page_addr) {
-    for (int i = 0; i < 8; i++) {
+    int i = 0;
+    for (; i < 8; i++) {
         if (page_table[i].valid && page_table[i].pageNum == page_addr) {
             return i;
         }
@@ -84,7 +89,8 @@ int execRead(int virtual_addr) {
     if (page_table[virtual_addr>>2].valid) {
         // increment tlb or fifoq
         if (!lru) {
-            for (int i = 0; i < 4; i++) {
+            int i = 0;
+            for (; i < 4; i++) {
                 if (fifoq[i] == -1) {
                     fifoq[i] = page_table[virtual_addr>>2].pageNum;
                     break;
@@ -139,7 +145,8 @@ int execRead(int virtual_addr) {
             
             // increment tlb or fifoq
             if (!lru) {
-                for (int i = 0; i < 4; i++) {
+                int i = 0;
+                for (; i < 4; i++) {
                     if (fifoq[i] == -1) {
                         fifoq[i] = page_table[virtual_addr>>2].pageNum;
                         break;
@@ -160,7 +167,8 @@ int execWrite(int virtual_addr, int num) {
     if (page_table[virtual_addr>>2].valid) {
         // increment tlb or fifoq
         if (!lru) {
-            for (int i = 0; i < 4; i++) {
+            int i = 0;
+            for (; i < 4; i++) {
                 if (fifoq[i] == -1) {
                     fifoq[i] = page_table[virtual_addr>>2].pageNum;
                     break;
@@ -219,7 +227,8 @@ int execWrite(int virtual_addr, int num) {
             page_table[virtual_addr>>2].pageNum = free_block_addr;
             // increment tlb or fifoq
             if (!lru) {
-                for (int i = 0; i < 4; i++) {
+                int i = 0;
+                for (; i < 4; i++) {
                     if (fifoq[i] == -1) {
                         fifoq[i] = page_table[virtual_addr>>2].pageNum;
                         break;
@@ -236,20 +245,23 @@ int execWrite(int virtual_addr, int num) {
 
 int showMain(int ppn) {
     if (ppn > 3) { printf("physical page number exceeds maximum\n"); };
-    for (int i = 0; i < 4; i++) {
+    int i = 0;
+    for (; i < 4; i++) {
         printf("%d:%d\n", ppn*BLOCKSIZE + i, main_memory[ppn][i]);
     }
 }
 
 int showDisk(int dpn) {
     if (dpn > 7) { printf("disk page number exceeds maximum\n"); };
-    for (int i = 0; i < 4; i++) {
+    int i = 0;
+    for (; i < 4; i++) {
         printf("%d:%d\n", dpn*BLOCKSIZE + i, disk_memory[dpn][i]);
     }
 }
 
 void showpTable() {
-    for (int i = 0; i < 8; i++) {
+    int i = 0;
+    for (; i < 8; i++) {
         printf("%d:%d:%d:%d\n", i, page_table[i].valid, page_table[i].dirty, page_table[i].pageNum);
     }
 }
