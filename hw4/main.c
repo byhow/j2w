@@ -4,35 +4,57 @@
 #define HEAPSIZE 127
 #define MAXARGV 80
 
-// save word to the memory heap
-static char heap[HEAPSIZE]={0};
+// save word to the memory heap (as a implicit free list)
+static unsigned char heap[HEAPSIZE]={0};
 // save the blocks that are either free or allocated
-static char blocklist[HEAPSIZE]={0};
+static unsigned char blocklist[HEAPSIZE]={0};
 // current block index
-static int current_index=0;
-// current size of the blocklist, not exceeding 126
+static int current_next_index=0;
+// current size of the heap, not exceeding 126
 static int current_size=0;
 
-int custom_malloc(int addr) {
-    printf("In Malloc: %d\n", addr);
-    // blocklist
-    int allocate_size=addr+1;
-    unsigned char new_header=allocate_size<<1|1;
+
+int get_min_diff(int req_size) {
+    // best-fit for the next free block
+    int min_diff = 128;
+    int min_index = 0;
     int i=0;
-    for(;i<HEAPSIZE;i++){
-        if (blocklist[i]) {
-            int block_num=i;
-            int header_size=blocklist[i]>>1;
-            int status=blocklist[i]&1;
-
-            if (!status && (unsigned int)(blocklist[i]>>1)>header_size+1) {
-                int next_block_size = header_size-allocate_size;
-                int next_block_index = block_num + allocate_size - 1;
-                int current_block_size = allocate_size;
-
-            }
+    for (;i<current_size;i++) {
+        int blk_size = blocklist[heap[i]]>>1;
+        int status = blocklist[heap[i]]&1;
+        printf("blocklist item is: %d\n",blocklist[heap[i]]);
+        printf("currentIndex: %d, current status: %d, current size: %d\n", i, status, blk_size);
+        if (!status && blk_size>req_size && (blk_size-req_size)<min_diff) {
+            min_diff = blk_size-req_size;
+            min_index=heap[i];
         }
     }
+    return min_index;
+}
+
+void printHeap() {
+    int i=0;
+    printf("Heap is: [");
+    for(;i<current_size;i++){
+        printf("%d,",heap[i]);
+    }
+    printf("]\n");
+    printf("current size: %d\n", current_size);
+}
+
+int custom_malloc(int req_size) {
+    // printf("In Malloc: %d\n", req_size);
+    // blocklist
+    unsigned char new_header=req_size<<1|1;
+    int best_fit_blk = get_min_diff(req_size);
+    int old_size = blocklist[best_fit_blk]>>1;
+
+    blocklist[best_fit_blk] = new_header;
+    blocklist[best_fit_blk+req_size+1] = (old_size-req_size-1)<<1;
+    heap[current_size++]=best_fit_blk+req_size+1;
+
+    printf("%d\n",best_fit_blk+1);
+    printHeap();
     return 0;
 }
 
@@ -73,11 +95,12 @@ int printmem(int addr, int num) {
 int main(){
     char command_str[MAXARGV];
     // initialize heap
-    unsigned char size_char = 126 & 0xFF;
-    heap[0] = size_char << 1;
-    blocklist[0] = size_char << 1;
+    unsigned char size_char=(HEAPSIZE-1)<<1;
+    heap[0]=0; // first block number
     current_size++;
-    current_index++;
+    blocklist[0] = size_char;
+    printf("%d\n",blocklist[0]);
+    current_next_index++;
 
     // shell 
     printf(">");
@@ -89,8 +112,8 @@ int main(){
             } else if (!strncmp(command_str, "malloc", 6)){
                 char* line = strtok(command_str, " ");
                 line = strtok(NULL, " ");
-                int addr = atoi(line);
-                custom_malloc(addr);
+                int req_size = atoi(line);
+                custom_malloc(req_size);
             } else if (!strncmp(command_str, "free", 4)) {
                 char* line = strtok(command_str, " ");
                 line = strtok(NULL, " ");
