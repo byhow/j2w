@@ -14,6 +14,27 @@ static int current_next_index=0;
 static int current_size=0;
 
 
+void swap(unsigned char* ap, unsigned char* bp) {
+    unsigned char tmp = *ap;
+    *ap = *bp;
+    *bp = tmp;
+}
+
+
+void sort_heap(int size, unsigned char arr[]) {
+    int i=0, j=0, min=-1;
+    for (;i<size-1;i++) {
+        min=i;
+        for (j=i+1;j<size;j++) {
+            if (arr[j]<arr[min]) {
+                min=j;
+            }
+        }
+        swap(&arr[min], &arr[i]);
+    }
+}
+
+
 int get_min_diff(int req_size) {
     // best-fit for the next free block
     int min_diff = 128;
@@ -24,7 +45,7 @@ int get_min_diff(int req_size) {
         int status = blocklist[heap[i]]&1;
         printf("blocklist item is: %d\n",blocklist[heap[i]]);
         printf("currentIndex: %d, current status: %d, current size: %d\n", i, status, blk_size);
-        if (!status && blk_size>req_size && (blk_size-req_size)<min_diff) {
+        if (!status && blk_size>=req_size && (blk_size-req_size)<min_diff) {
             min_diff = blk_size-req_size;
             min_index=heap[i];
         }
@@ -54,11 +75,13 @@ int custom_malloc(int req_size) {
     }
 
     int old_size = (int)(unsigned char)blocklist[best_fit_blk]>>1;
-
-    blocklist[best_fit_blk] = new_header;
+    
+    blocklist[best_fit_blk] = new_header;        
     blocklist[best_fit_blk+req_size+1] = (old_size-req_size-1)<<1;
     heap[current_size++]=best_fit_blk+req_size+1;
-
+    
+    sort_heap(current_size, heap);
+    
     printf("%d\n",best_fit_blk+1);
     printHeap();
     return 0;
@@ -89,8 +112,6 @@ int custom_free(int addr) {
                 for (;j<current_size;j++) {
                     heap[j]=heap[j+1];
                 }
-
-                // printHeap();
             }
             break;
         }
@@ -99,8 +120,7 @@ int custom_free(int addr) {
 }
 
 
-int print_blocklist() { 
-    // printf("In blocklist\n");
+int print_blocklist() {
     int i=0;
     for (;i<current_size;i++) {
         int block_num=heap[i];
@@ -115,13 +135,21 @@ int print_blocklist() {
 
 int writemem(int addr, char* content) {
     printf("in write mem: addr:%d content:%s\n", addr, content);
-    // heap
+    int i = 0;
+    for (;i<strlen(content);i++) {
+        blocklist[addr+i]=content[i];
+    }
     return 0;
 }
 
 
 int printmem(int addr, int num) {
     printf("in printmem: addr:%d num:%d\n", addr, num);
+    int i = 0;
+    for (;i<num;i++) {
+        printf("%.2x ", (unsigned)blocklist[addr+i]);
+    }
+    printf("\n");
     return 0;
 }
 
