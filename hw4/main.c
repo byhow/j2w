@@ -5,10 +5,10 @@
 #define MAXARGV 80
 
 // save word to the memory heap
-static char heap[HEAPSIZE];
+static char heap[HEAPSIZE]={0};
 // save the blocks that are either free or allocated
-static char blocklist[HEAPSIZE] = {0};
-// current block
+static char blocklist[HEAPSIZE]={0};
+// current block index
 static int current_index=0;
 // current size of the blocklist, not exceeding 126
 static int current_size=0;
@@ -19,18 +19,17 @@ int custom_malloc(int addr) {
     int allocate_size=addr+1;
     unsigned char new_header=allocate_size<<1|1;
     int i=0;
-    for(; i < HEAPSIZE; i++){
+    for(;i<HEAPSIZE;i++){
         if (blocklist[i]) {
-            int block_num = i;
-            int header_size = blocklist[i]>>1;
-            int status = blocklist[i]&1;
+            int block_num=i;
+            int header_size=blocklist[i]>>1;
+            int status=blocklist[i]&1;
 
-            if (!status && (unsigned int)(blocklist[i]>>1) > header_size+1) {
+            if (!status && (unsigned int)(blocklist[i]>>1)>header_size+1) {
                 int next_block_size = header_size-allocate_size;
                 int next_block_index = block_num + allocate_size - 1;
                 int current_block_size = allocate_size;
 
-                
             }
         }
     }
@@ -49,13 +48,11 @@ int print_blocklist() {
     int i=0;
     for (;i<HEAPSIZE;i++) {
         if (blocklist[i]) {
-            int block_num = i+1;
             int heap=(int)(unsigned char)blocklist[i]>>1;
             int status=(int)(unsigned char)blocklist[i]&1;
-            printf("%d, %d, %s\n", block_num, heap, status?"allocated":"free");
+            printf("%d, %d, %s\n", i+1, heap, status?"allocated":"free");
         }
     }
-
     return 0; 
 }
 
@@ -81,6 +78,8 @@ int main(){
     blocklist[0] = size_char << 1;
     current_size++;
     current_index++;
+
+    // shell 
     printf(">");
     
     while(fgets(command_str, MAXARGV, stdin)) {
