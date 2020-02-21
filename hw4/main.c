@@ -17,7 +17,7 @@ static int current_size=0;
 int get_min_diff(int req_size) {
     // best-fit for the next free block
     int min_diff = 128;
-    int min_index = 0;
+    int min_index = -1;
     int i=0;
     for (;i<current_size;i++) {
         int blk_size = blocklist[heap[i]]>>1;
@@ -47,7 +47,13 @@ int custom_malloc(int req_size) {
     // blocklist
     unsigned char new_header=req_size<<1|1;
     int best_fit_blk = get_min_diff(req_size);
-    int old_size = blocklist[best_fit_blk]>>1;
+    
+    if (best_fit_blk == -1) {
+        printf("%d\n",-1);
+        return 0;
+    }
+
+    int old_size = (int)(unsigned char)blocklist[best_fit_blk]>>1;
 
     blocklist[best_fit_blk] = new_header;
     blocklist[best_fit_blk+req_size+1] = (old_size-req_size-1)<<1;
@@ -61,6 +67,34 @@ int custom_malloc(int req_size) {
 
 int custom_free(int addr) {
     printf("In Free: %d\n", addr);
+    // merge
+    int i = 0;
+    for (;i<current_size;i++) {
+        if (heap[i]==(addr-1)) {
+            blocklist[heap[i]]=blocklist[heap[i]]>>1<<1;
+            
+            // merge if next block is free
+            if (!(blocklist[heap[i+1]]&1)) {
+                unsigned char next_header = blocklist[heap[i+1]];
+                int next_size = (int)(unsigned char)next_header>>1;
+                int old_size = (int)(unsigned char)blocklist[heap[i]]>>1;
+                int new_size =  old_size + next_size + 1;
+                unsigned char new_header = new_size<<1;
+                blocklist[heap[i]] = new_header;
+                blocklist[heap[i+1]]=0;
+
+                // shift heap array
+                current_size--;
+                int j=i+1;
+                for (;j<current_size;j++) {
+                    heap[j]=heap[j+1];
+                }
+
+                // printHeap();
+            }
+            break;
+        }
+    }
     return 0;
 }
 
@@ -68,12 +102,12 @@ int custom_free(int addr) {
 int print_blocklist() { 
     // printf("In blocklist\n");
     int i=0;
-    for (;i<HEAPSIZE;i++) {
-        if (blocklist[i]) {
-            int heap=(int)(unsigned char)blocklist[i]>>1;
-            int status=(int)(unsigned char)blocklist[i]&1;
-            printf("%d, %d, %s\n", i+1, heap, status?"allocated":"free");
-        }
+    for (;i<current_size;i++) {
+        int block_num=heap[i];
+        int heap_size=blocklist[heap[i]]>>1;
+        int status=blocklist[heap[i]]&1;
+        printf("%d, %d, %s\n", block_num+1, heap_size, status?"allocated":"free");
+        
     }
     return 0; 
 }
@@ -99,7 +133,6 @@ int main(){
     heap[0]=0; // first block number
     current_size++;
     blocklist[0] = size_char;
-    printf("%d\n",blocklist[0]);
     current_next_index++;
 
     // shell 
