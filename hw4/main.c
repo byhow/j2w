@@ -127,7 +127,6 @@ int print_blocklist() {
         printf("%d, %d, %s\n", block_num+1, heap_size, status?"allocated":"free");
         
     }
-    printHeap();
     return 0; 
 }
 
