@@ -13,13 +13,11 @@ static int current_next_index=0;
 // current size of the heap, not exceeding 126
 static int current_size=0;
 
-
 void swap(unsigned char* ap, unsigned char* bp) {
     unsigned char tmp = *ap;
     *ap = *bp;
     *bp = tmp;
 }
-
 
 void sort_heap(int size, unsigned char arr[]) {
     int i=0, j=0, min=-1;
@@ -34,7 +32,6 @@ void sort_heap(int size, unsigned char arr[]) {
     }
 }
 
-
 int get_min_diff(int req_size) {
     // best-fit for the next free block
     int min_diff = 128;
@@ -43,8 +40,6 @@ int get_min_diff(int req_size) {
     for (;i<current_size;i++) {
         int blk_size = blocklist[heap[i]]>>1;
         int status = blocklist[heap[i]]&1;
-        printf("blocklist item is: %d\n",blocklist[heap[i]]);
-        printf("currentIndex: %d, current status: %d, current size: %d\n", i, status, blk_size);
         if (!status && blk_size>=req_size && (blk_size-req_size)<min_diff) {
             min_diff = blk_size-req_size;
             min_index=heap[i];
@@ -64,8 +59,6 @@ void printHeap() {
 }
 
 int custom_malloc(int req_size) {
-    // printf("In Malloc: %d\n", req_size);
-    // blocklist
     unsigned char new_header=req_size<<1|1;
     int best_fit_blk = get_min_diff(req_size);
     
@@ -74,43 +67,48 @@ int custom_malloc(int req_size) {
         return 0;
     }
 
-    int old_size = (int)(unsigned char)blocklist[best_fit_blk]>>1;
-    
-    blocklist[best_fit_blk] = new_header;        
-    blocklist[best_fit_blk+req_size+1] = (old_size-req_size-1)<<1;
-    heap[current_size++]=best_fit_blk+req_size+1;
-    
-    sort_heap(current_size, heap);
-    
     printf("%d\n",best_fit_blk+1);
-    printHeap();
+    int old_size = (int)(unsigned char)blocklist[best_fit_blk]>>1;
+    blocklist[best_fit_blk] = new_header;
+    if (old_size!=req_size) {
+        blocklist[best_fit_blk+req_size+1] = (old_size-req_size-1)<<1;
+        if (best_fit_blk+req_size+1<HEAPSIZE) {
+            heap[current_size++]=best_fit_blk+req_size+1;
+            sort_heap(current_size, heap);
+        }
+    }
     return 0;
 }
 
 
 int custom_free(int addr) {
-    printf("In Free: %d\n", addr);
     // merge
+    if (!(blocklist[heap[addr-1]]&1))
+    {
+        return 0;
+    }
     int i = 0;
     for (;i<current_size;i++) {
         if (heap[i]==(addr-1)) {
             blocklist[heap[i]]=blocklist[heap[i]]>>1<<1;
             
             // merge if next block is free
-            if (!(blocklist[heap[i+1]]&1)) {
+            if (!(blocklist[heap[i+1]]&1) && current_size > 1 && (heap[i] || blocklist[heap[i+1]])) {
                 unsigned char next_header = blocklist[heap[i+1]];
                 int next_size = (int)(unsigned char)next_header>>1;
                 int old_size = (int)(unsigned char)blocklist[heap[i]]>>1;
                 int new_size =  old_size + next_size + 1;
                 unsigned char new_header = new_size<<1;
                 blocklist[heap[i]] = new_header;
-                blocklist[heap[i+1]]=0;
-
+            
                 // shift heap array
-                current_size--;
-                int j=i+1;
-                for (;j<current_size;j++) {
-                    heap[j]=heap[j+1];
+                if (current_size>1) {
+                    blocklist[heap[i+1]]=0;
+                    current_size--;
+                    int j=i+1;
+                    for (;j<current_size;j++) {
+                        heap[j]=heap[j+1];
+                    }
                 }
             }
             break;
@@ -129,12 +127,12 @@ int print_blocklist() {
         printf("%d, %d, %s\n", block_num+1, heap_size, status?"allocated":"free");
         
     }
+    printHeap();
     return 0; 
 }
 
 
 int writemem(int addr, char* content) {
-    printf("in write mem: addr:%d content:%s\n", addr, content);
     int i = 0;
     for (;i<strlen(content);i++) {
         blocklist[addr+i]=content[i];
@@ -144,7 +142,6 @@ int writemem(int addr, char* content) {
 
 
 int printmem(int addr, int num) {
-    printf("in printmem: addr:%d num:%d\n", addr, num);
     int i = 0;
     for (;i<num;i++) {
         printf("%.2x ", (unsigned)blocklist[addr+i]);
