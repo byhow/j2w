@@ -9,7 +9,10 @@ compile:
 
 run:
 	make compile
-	./hw5c
+	./hw5s data_base.csv 30000
+
+client: 
+	./hw5c localhost 30000
 
 debug:
 	make compile && gdb hw5s
