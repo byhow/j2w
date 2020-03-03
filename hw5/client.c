@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     unsigned char q[257];
     while (fgets(q, 257, stdin)) {
         char buf[257];
-        int len = strlen(q)-1;
+        int len = strlen(q);
         if (len < 1) { 
             printf(">");
             continue; 
@@ -59,7 +59,10 @@ int main(int argc, char* argv[]) {
         strcat(query, q);
         send(sock, query, strlen(query), 0);
         valread = read(sock, buf, 257);
-        printf("%s\n", buf);
+        if (!strncmp(buf+1, "quit", 4)) {
+            break;
+        }
+        printf("%s\n", buf+1);
         printf(">");
         memset(buf, 0, 257);
     }

@@ -5,18 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct games {
-    char* type;
-    char* game_id;
-    char* home_team;
-    char* away_team;
-    char* week;
-    char* season;
-    char* home_score;
-    char* away_score;
-};
-
-static struct games game_table[400];
+char* types[400];
+char* game_ids[400];
+char* home_teams[400];
+char* away_teams[400];
+char* weeks[400];
+char* seasons[400];
+char* home_scores[400];
+char* away_scores[400];
+static int size = -1;
 
 int parsedb(char* data_base_f) {
     FILE* fp;
@@ -27,10 +24,8 @@ int parsedb(char* data_base_f) {
         return -1;
     }
 
-    int size = -1;
     while (fgets(line, 255, (FILE*)fp)) {
-        if (line[0]=='\n' || size==-1) { 
-            printf("at -1");
+        if (line[0]=='\n' || size==-1) {
             size++;
             continue; 
         }
@@ -43,23 +38,60 @@ int parsedb(char* data_base_f) {
         char* home_score = strtok(NULL, ",");
         char* away_score = strtok(NULL, ",");
         away_score[strlen(away_score)-1] = '\0';
-        game_table[size].type = type;
-        game_table[size].game_id = game_id;
-        game_table[size].home_team = home_team;
-        game_table[size].away_team = away_team;
-        game_table[size].week = week;
-        game_table[size].season = season;
-        game_table[size].home_score = home_score;
-        game_table[size].away_score = away_score;
+
+        
+        types[size] = malloc(strlen(type));
+        game_ids[size] = malloc(strlen(game_id));
+        home_teams[size] = malloc(strlen(home_team));
+        away_teams[size] = malloc(strlen(away_team));
+        weeks[size] = malloc(strlen(week));
+        seasons[size] = malloc(strlen(season));
+        home_scores[size] = malloc(strlen(home_score));
+        away_scores[size] = malloc(strlen(away_score));
+
+        strcpy(types[size], type);
+        strcpy(game_ids[size], game_id);
+        strcpy(home_teams[size], home_team);
+        strcpy(away_teams[size], away_team);
+        strcpy(weeks[size], week);
+        strcpy(seasons[size], season);
+        strcpy(home_scores[size], home_score);
+        strcpy(away_scores[size], away_score);
         size++;
+        
     } 
     fclose(fp);
     return 0;
 }
 
 
-int main(int argc, char* argv[]) { 
-    
+char* search(char* game_id, char* field) {
+    int i = 0;
+    for (; i < size; i++) {
+        if (!strcmp(game_ids[i], game_id)) {
+            if(!strcmp(field, "type")) {
+                return types[i];
+            } else if (!strcmp(field, "game_id")) {
+                return game_ids[i];
+            } else if (!strcmp(field, "home_team")) {
+                return home_teams[i];
+            } else if (!strcmp(field, "away_team")) {
+                return away_teams[i];
+            } else if (!strcmp(field, "week")) {
+                return weeks[i];
+            } else if (!strcmp(field, "season")) {
+                return seasons[i];
+            } else if (!strcmp(field, "home_score")) {
+                return home_scores[i];
+            } else if (!strcmp(field, "away_score")) {
+                return away_scores[i];
+            }
+        }
+    }
+    return "unknown";
+}
+
+int main(int argc, char* argv[]) {
     int port = atoi(argv[2]);
     char* data_base = argv[1];
     printf("Starting server on database: %s, on port %d\n", data_base, port);
@@ -111,11 +143,31 @@ int main(int argc, char* argv[]) {
             valread = recv(new_socket, recv_buffer, 257, 0);
             int buf_len = (int) (recv_buffer[0]);
             char* buf = recv_buffer+1;
-            printf("%s\n", buf);
-            printf("%d\n", buf_len);
-            send(new_socket, buf, 257, 0);
+            char* resp = NULL;
+            if (!strncmp(buf, "quit", 4)) {
+                resp = "quit";
+            } else {
+                // parse buffer
+                char* game_id = strtok(buf, " ");
+                char* field = strtok(NULL, "\n");
+                printf("%s %s\n", game_id, field);
+                resp = search(game_id, field);
+            }
+            
+            // return result
+            int len = strlen(resp);
+            unsigned char length = len & 0xFF;
+            unsigned char query[257];
+            query[0] = length;
+            query[1] = '\0';
+            strcat(query, resp);
+            send(new_socket, query, strlen(query), 0);
+            if (!strncmp(resp+1, "quit", 4)) {
+                break;
+            }
         }
         
     }
+    
     return 0; 
 }
