@@ -42,13 +42,13 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    printf(">");
+    printf("> ");
     unsigned char q[257];
     while (fgets(q, 257, stdin)) {
         char buf[257];
         int len = strlen(q);
         if (len < 1) { 
-            printf(">");
+            printf("> ");
             continue; 
         }
         unsigned char length = len & 0xFF;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
             break;
         }
         printf("%s\n", buf+1);
-        printf(">");
+        printf("> ");
         memset(buf, 0, 257);
     }
     close(sock);
