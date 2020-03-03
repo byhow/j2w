@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     char* address = argv[1];
     int sock = 0, valread = 0;
     struct sockaddr_in serv_addr; 
-    printf("Starting client socket on addr of %s, port of %d\n", address, port);
+    // printf("Starting client socket on addr of %s, port of %d\n", address, port);
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     char ip_addr[257];
     struct hostent* hnet = gethostbyname(address);
     strcpy(ip_addr, inet_ntoa(*((struct in_addr*) hnet -> h_addr_list[0])));
-    printf("ip address is %s\n",ip_addr);
+    // printf("ip address is %s\n",ip_addr);
 
     // connect
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
         strcat(query, q);
         send(sock, query, strlen(query), 0);
         valread = read(sock, buf, 257);
-        if (!strncmp(buf+1, "quit", 4)) {
+        if (!strncmp(buf, "quit", 4)) {
             break;
         }
         printf("%s\n", buf+1);

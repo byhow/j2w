@@ -94,7 +94,7 @@ char* search(char* game_id, char* field) {
 int main(int argc, char* argv[]) {
     int port = atoi(argv[2]);
     char* data_base = argv[1];
-    printf("Starting server on database: %s, on port %d\n", data_base, port);
+    printf("server started\n");
     parsedb(data_base);
     struct sockaddr_in address;
     int addrlen = sizeof(address);
@@ -143,16 +143,15 @@ int main(int argc, char* argv[]) {
             valread = recv(new_socket, recv_buffer, 257, 0);
             int buf_len = (int) (recv_buffer[0]);
             char* buf = recv_buffer+1;
-            char* resp = NULL;
             if (!strncmp(buf, "quit", 4)) {
-                resp = "quit";
-            } else {
-                // parse buffer
-                char* game_id = strtok(buf, " ");
-                char* field = strtok(NULL, "\n");
-                printf("%s %s\n", game_id, field);
-                resp = search(game_id, field);
+                send(new_socket, buf, strlen(buf), 0);
+                return 0;
             }
+            // parse buffer
+            char* game_id = strtok(buf, " ");
+            char* field = strtok(NULL, "\n");
+            printf("%s %s\n", game_id, field);
+            char* resp = search(game_id, field);
             
             // return result
             int len = strlen(resp);
@@ -162,9 +161,6 @@ int main(int argc, char* argv[]) {
             query[1] = '\0';
             strcat(query, resp);
             send(new_socket, query, strlen(query), 0);
-            if (!strncmp(resp+1, "quit", 4)) {
-                break;
-            }
         }
         
     }

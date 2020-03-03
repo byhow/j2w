@@ -15,5 +15,5 @@ client:
 	./hw5c localhost 30000
 
 debug:
-	make compile && gdb hw5s
+	make compile && gdb ./hw5s
 
