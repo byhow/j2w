@@ -7,8 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
-
-int main(int argc, char* argv[]) { 
+int start_client(int argc, char* argv[]) { 
     int port = atoi(argv[2]);
     char* address = argv[1];
     int sock = 0, valread = 0;

@@ -149,8 +149,8 @@ int printmem(int addr, int num) {
     return 0;
 }
 
-
-int main(){
+// example execution
+int execute(){
     char command_str[MAXARGV];
     // initialize heap
     unsigned char size_char=(HEAPSIZE-1)<<1;

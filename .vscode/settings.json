@@ -4,4 +4,13 @@
         "stdlib.h": "c",
         "unistd.h": "c"
     }
+    ,
+    "[c]": {
+        "editor.formatOnSave": true
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true
+    },
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/src/build/compile_commands.json",
+    "cmake.configureOnOpen": true
 }

@@ -151,8 +151,8 @@ void adventure() {
     
 }
 
-
-int main() {
+// example execution
+int execute() {
     adventure();
     return 0;
 }

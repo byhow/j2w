@@ -91,7 +91,7 @@ char* search(char* game_id, char* field) {
     return "unknown";
 }
 
-int main(int argc, char* argv[]) {
+int start_server(int argc, char* argv[]) {
     int port = atoi(argv[2]);
     char* data_base = argv[1];
     printf("server started\n");
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &optval, sizeof(optval)))
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)))
     {
         perror("setsockopt");
         exit(EXIT_FAILURE);

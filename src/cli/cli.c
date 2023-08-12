@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define MAXARGV 80
 #define MAXROLL 25
@@ -215,8 +216,8 @@ struct cmd* parseLine(char* commandStr) {
     return command;
 }
 
-
-int main(){
+// example execution
+int execute(){
     char commandStr[MAXARGV];
     printf("prompt > ");
     
